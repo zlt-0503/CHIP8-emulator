@@ -1,8 +1,14 @@
 #include "CHIP8.h"
+#include <algorithm>
+#include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <fstream>
+#include <ios>
+#include <iostream>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 void CHIP8::stack_push(uint16_t address) {
     if (SP >= STACK_SIZE) {
@@ -91,7 +97,7 @@ void CHIP8::logical_and_arithmetic(const CHIP8::Instruction& instruction) {
     }
 }
 
-void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) { 
+void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
     uint8_t &VX = V[instruction.X];
     uint8_t &VY = V[instruction.Y];
     uint8_t &VF = V[0xF];
@@ -107,7 +113,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     + std::to_string(instruction.opcode));
             }
             break;
-        
+
         case 0x1: // jump
             PC = instruction.NNN;
             break;
@@ -161,7 +167,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
             PC = instruction.NNN + V[0x0];
             break;
 
-        case 0xC: { // random 
+        case 0xC: { // random
             uint8_t random_number = distrib(gen);
             V[instruction.X] = random_number & instruction.NN;
             break;
@@ -284,7 +290,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                         V[i] = memory[I + i];
                     }
                     break;
-                
+
                 default:
                     throw std::runtime_error("Unknown opcode: "
                         + std::to_string(instruction.opcode));
@@ -294,6 +300,56 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
             throw std::runtime_error("Unknown opcode: "
                 + std::to_string(instruction.opcode));
     }
+}
+
+void CHIP8::clear_display() {
+    for (auto& row : display) {
+        row.fill((false));
+    }
+}
+
+void CHIP8::update_timers() {
+    if (delay_timer > 0)--delay_timer;
+    if (sound_timer > 0) --sound_timer;
+}
+
+bool CHIP8::is_sound_playing() const {
+    return sound_timer > 0;
+}
+
+const std::array<std::array<bool, DISPLAY_WIDTH>, DISPLAY_HEIGHT>& CHIP8::get_display() const {
+    return display;
+}
+
+void CHIP8::set_key(uint8_t key, bool is_pressed) {
+    if (key < KEYPAD_SIZE) keypad[key] = is_pressed;
+}
+
+void CHIP8::load_ROM(const std::string& file_name) {
+    std::ifstream file(file_name, std::ios::binary | std::ios::ate);
+    if (!file) {
+        throw std::runtime_error("Failed to load ROM file: " + file_name);
+    }
+
+    std::streamsize file_size = file.tellg();
+    file.seekg(0, std::ios::beg);
+
+    if (file_size > (MEMORY_SIZE - 0x200)) {
+        throw std::runtime_error("File Size exceeds memory size");
+    }
+
+    std::vector<char> buffer(file_size);
+    if (!file.read(buffer.data(), file_size)) {
+        throw std::runtime_error("Failed to read ROM file: " + file_name);
+    }
+
+    std::copy(buffer.begin(), buffer.end(), memory.begin() + 0x200);
+}
+
+void CHIP8::emulate_cycle() {
+    uint8_t opcode = fetch_opcode();
+    Instruction instruction = decode_opcode(opcode);
+    execute_opcode(instruction);
 }
 
 void CHIP8::initialize() {
@@ -309,7 +365,7 @@ void CHIP8::initialize() {
     }
     delay_timer = 0;
     sound_timer = 0;
-    
+
     // initialize fonts
     uint8_t font[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -337,5 +393,50 @@ CHIP8::CHIP8(bool legacyShift) : useLegacyShift(legacyShift), gen(rd()), distrib
     initialize();
 }
 
+void CHIP8::render_display() const {
+    std::cout << "\033[2J\033[H";
+
+    for (size_t y = 0; y < DISPLAY_HEIGHT; ++y) {
+        for (size_t x = 0; x < DISPLAY_WIDTH; ++x) {
+            std::cout << (display[y][x] ? "█" : " ");
+        }
+        std::cout << std::endl;
+    }
+}
+
+void CHIP8::handle_input() {
+    keypad.fill(false);
+
+    char key;
+    if (std::cin >> key) {
+        if (key >= '0' && key <= '9') {
+            keypad[key - '0'] = true;
+        } else if (key >= 'A' && key <= 'F') {
+            keypad[10 + (key - 'A')] = true;
+        } else if (key >= 'a' && key <= 'f') {
+            keypad[10 + (key - 'a')] = true;
+        }
+    }
+}
+
+// public methods
+
+void CHIP8::run() {
+    const auto duration = std::chrono::milliseconds(1000 / FRAME_RATE);
+    auto last_time = std::chrono::high_resolution_clock::now();
+
+    while (1) {
+        auto curr_time = std::chrono::high_resolution_clock::now();
+        auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - last_time);
+
+        if (elapsed_time >= duration) {
+            last_time = curr_time;
+            update_timers();
+            emulate_cycle();
+            render_display();
+            handle_input();
+        }
+    }
+}
 
 

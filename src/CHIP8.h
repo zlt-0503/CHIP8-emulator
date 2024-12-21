@@ -14,16 +14,12 @@
 #define KEYPAD_SIZE 16
 #define FONT_ADDRESS 50
 #define FONT_SIZE 5
+#define FRAME_RATE 60
 
 class CHIP8 {
   public:
-    void initialize();
-    void load_ROM(const std::string file_name);
-    void emulate_cycle();
-    void set_key(uint8_t key, bool is_pressed);
-    std::array<std::array<bool, DISPLAY_WIDTH>, DISPLAY_HEIGHT>& get_display() const;
-    bool is_sound_playing() const;
-    
+    void run();
+    void load_ROM(const std::string& file_name);
     CHIP8(bool legacyShift = false);
     ~CHIP8();
 
@@ -50,7 +46,7 @@ class CHIP8 {
         uint8_t NN;
         uint8_t NNN;
     };
-    
+
     // private methods
 
     /**
@@ -67,6 +63,15 @@ class CHIP8 {
     void clear_display();
     void draw_sprite(uint8_t x, uint8_t y, uint8_t height);
     void update_timers();
+
+    void initialize();
+    void emulate_cycle();
+    void set_key(uint8_t key, bool is_pressed);
+    const std::array<std::array<bool, DISPLAY_WIDTH>, DISPLAY_HEIGHT>& get_display() const;
+    bool is_sound_playing() const;
+
+    void render_display() const;
+    void handle_input();
 
     void stack_push(uint16_t address);
     uint16_t stack_pop();
