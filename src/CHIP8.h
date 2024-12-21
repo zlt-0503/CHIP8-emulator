@@ -21,7 +21,7 @@ class CHIP8 {
     void run();
     void load_ROM(const std::string& file_name);
     CHIP8(bool legacyShift = false);
-    ~CHIP8();
+    ~CHIP8() = default;
 
   private:
     bool useLegacyShift;
