@@ -25,8 +25,9 @@ uint16_t CHIP8::stack_pop() {
 }
 
 uint16_t CHIP8::fetch_opcode() {
-    uint16_t opcode = (memory[PC] << 8) | (memory[PC+1]);
+    uint16_t opcode = (memory[PC] << 8) | (memory[PC + 1]);
     PC += 2;
+    std::cout << "Fetched opcode: 0x" << std::hex << opcode << std::dec << " at PC: 0x" << std::hex << (PC - 2) << std::dec << std::endl;
     return opcode;
 }
 
@@ -98,15 +99,16 @@ void CHIP8::logical_and_arithmetic(const CHIP8::Instruction& instruction) {
 }
 
 void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
+    std::cout << "Executing opcode: 0x" << std::hex << instruction.opcode << std::dec << std::endl;
     uint8_t &VX = V[instruction.X];
     uint8_t &VY = V[instruction.Y];
     uint8_t &VF = V[0xF];
 
     switch (instruction.type) {
         case 0x0:
-            if (instruction.NN == 0xE0) { // 00E0: clear screen
+            if (instruction.opcode == 0x00E0) { // 00E0: clear screen
                 clear_display();
-            } else if (instruction.NN == 0xEE) { // 00EE: subroutines
+            } else if (instruction.opcode == 0x00EE) { // 00EE: return from subroutine
                 PC = stack_pop();
             } else {
                 throw std::runtime_error("Unknown opcode: 0x0"
@@ -114,66 +116,66 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
             }
             break;
 
-        case 0x1: // jump
+        case 0x1: // 1NNN: jump to address NNN
             PC = instruction.NNN;
             break;
 
-        case 0x2: // subroutines
+        case 0x2: // 2NNN: call subroutine at NNN
             stack_push(PC);
             PC = instruction.NNN;
             break;
 
-        case 0x3: // jump if VX == NN
-            if (V[instruction.X] == instruction.NN) {
+        case 0x3: // 3XNN: skip next instruction if VX == NN
+            if (VX == instruction.NN) {
                 PC += 2;
             }
             break;
 
-        case 0x4: // jump if VX != NN
-            if (V[instruction.X] != instruction.NN) {
+        case 0x4: // 4XNN: skip next instruction if VX != NN
+            if (VX != instruction.NN) {
                 PC += 2;
             }
             break;
 
-        case 0x5: // jump if VX == VY
-            if (V[instruction.X] == V[instruction.Y]) {
+        case 0x5: // 5XY0: skip next instruction if VX == VY
+            if (VX == VY) {
                 PC += 2;
             }
             break;
 
-        case 0x6: // set VX to NN
-            V[instruction.X] = instruction.NN;
+        case 0x6: // 6XNN: set VX to NN
+            VX = instruction.NN;
             break;
 
-        case 0x7: // add NN to VX
-            V[instruction.X] += instruction.NN;
+        case 0x7: // 7XNN: add NN to VX
+            VX += instruction.NN;
             break;
 
-        case 0x8: // arithmetic and logical instructions
+        case 0x8: // 8XYN: arithmetic and logical instructions
             logical_and_arithmetic(instruction);
             break;
 
-        case 0x9: // jump if VX != VY
-            if (V[instruction.X] != V[instruction.Y]) {
+        case 0x9: // 9XY0: skip next instruction if VX != VY
+            if (VX != VY) {
                 PC += 2;
             }
             break;
 
-        case 0xA: // set index
+        case 0xA: // ANNN: set I to NNN
             I = instruction.NNN;
             break;
 
-        case 0xB: // jump with offset
-            PC = instruction.NNN + V[0x0];
+        case 0xB: // BNNN: jump to address NNN + V0
+            PC = instruction.NNN + V[0];
             break;
 
-        case 0xC: { // random
+        case 0xC: { // CXNN: set VX to random number & NN
             uint8_t random_number = distrib(gen);
-            V[instruction.X] = random_number & instruction.NN;
+            VX = random_number & instruction.NN;
             break;
         }
 
-        case 0xD: { // display
+        case 0xD: { // DXYN: draw sprite at (VX, VY) with width 8 and height N
             uint8_t x = VX % DISPLAY_WIDTH;
             uint8_t y = VY % DISPLAY_HEIGHT;
 
@@ -186,7 +188,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     break;
                 }
 
-                for (int col = 0; col < 0x8; ++ col) {
+                for (int col = 0; col < 8; ++col) {
                     if (x + col >= DISPLAY_WIDTH) {
                         break;
                     }
@@ -207,13 +209,13 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
 
         case 0xE:
             switch (instruction.NN) {
-                case 0x9E:
+                case 0x9E: // EX9E: skip next instruction if key in VX is pressed
                     if (keypad[VX]) {
                         PC += 2;
                     }
                     break;
 
-                case 0xA1:
+                case 0xA1: // EXA1: skip next instruction if key in VX is not pressed
                     if (!keypad[VX]) {
                         PC += 2;
                     }
@@ -227,25 +229,24 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
 
         case 0xF:
             switch (instruction.NN) {
-                // timers
-                case 0x07:
+                case 0x07: // FX07: set VX to delay timer value
                     VX = delay_timer;
                     break;
 
-                case 0x15:
+                case 0x15: // FX15: set delay timer to VX
                     delay_timer = VX;
                     break;
 
-                case 0x18:
+                case 0x18: // FX18: set sound timer to VX
                     sound_timer = VX;
                     break;
 
-                case 0x1E:
+                case 0x1E: // FX1E: add VX to I
                     I += VX;
                     VF = (I > 0xFFF) ? 1 : 0;
                     break;
 
-                case 0x0A: {
+                case 0x0A: { // FX0A: wait for a key press, store the value of the key in VX
                     bool key_pressed = false;
                     for (uint8_t i = 0; i < KEYPAD_SIZE; ++i) {
                         if (keypad[i]) {
@@ -262,12 +263,11 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     break;
                 }
 
-                case 0x29:
+                case 0x29: // FX29: set I to location of sprite for digit VX
                     I = FONT_ADDRESS + (VX * FONT_SIZE);
                     break;
 
-
-                case 0x33: {
+                case 0x33: { // FX33: store BCD representation of VX in memory locations I, I+1, and I+2
                     uint8_t hundreds = VX / 100;
                     uint8_t tens = (VX / 10) % 10;
                     uint8_t ones = VX % 10;
@@ -279,13 +279,13 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     break;
                 }
 
-                case 0x55:
+                case 0x55: // FX55: store registers V0 through VX in memory starting at location I
                     for (uint8_t i = 0; i <= instruction.X; ++i) {
                         memory[I + i] = V[i];
                     }
                     break;
 
-                case 0x65:
+                case 0x65: // FX65: read registers V0 through VX from memory starting at location I
                     for (uint8_t i = 0; i <= instruction.X; ++i) {
                         V[i] = memory[I + i];
                     }
@@ -295,6 +295,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     throw std::runtime_error("Unknown opcode: 0xF"
                         + std::to_string(instruction.opcode));
             }
+            break;
 
         default:
             throw std::runtime_error("Unknown opcode: "
@@ -304,7 +305,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
 
 void CHIP8::clear_display() {
     for (auto& row : display) {
-        row.fill((false));
+        row.fill(false);
     }
 }
 
@@ -356,7 +357,7 @@ void CHIP8::initialize() {
     memory.fill(0);
     V.fill(0);
     I = 0;
-    PC = 0x200;
+    PC = 0x200; // Program counter starts at 0x200
     stack.fill(0);
     SP = 0;
     keypad.fill(false);
@@ -387,34 +388,86 @@ void CHIP8::initialize() {
     };
 
     std::memcpy(&memory[FONT_ADDRESS], font, 80);
+
+    initialize_SDL();
 }
 
 CHIP8::CHIP8(bool legacyShift) : useLegacyShift(legacyShift), gen(rd()), distrib(0, 255) {
     initialize();
 }
 
-void CHIP8::render_display() const {
-    std::cout << "\033[2J\033[H";
+CHIP8::~CHIP8() {
+    cleanup_SDL();
+}
 
-    for (size_t y = 0; y < DISPLAY_HEIGHT; ++y) {
-        for (size_t x = 0; x < DISPLAY_WIDTH; ++x) {
-            std::cout << (display[y][x] ? "█" : " ");
-        }
-        std::cout << std::endl;
+void CHIP8::initialize_SDL() {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+        throw std::runtime_error("Failed to initialize SDL: " + std::string(SDL_GetError()));
+    }
+
+    window = SDL_CreateWindow("CHIP-8 Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, DISPLAY_WIDTH * WINDOW_SCALE, DISPLAY_HEIGHT * WINDOW_SCALE, SDL_WINDOW_SHOWN);
+    if (!window) {
+        throw std::runtime_error("Failed to create window: " + std::string(SDL_GetError()));
+    }
+
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer) {
+        throw std::runtime_error("Failed to create renderer: " + std::string(SDL_GetError()));
     }
 }
 
-void CHIP8::handle_input() {
-    keypad.fill(false);
+void CHIP8::cleanup_SDL() {
+    if (renderer) {
+        SDL_DestroyRenderer(renderer);
+    }
+    if (window) {
+        SDL_DestroyWindow(window);
+    }
+    SDL_Quit();
+}
 
-    char key;
-    if (std::cin >> key) {
-        if (key >= '0' && key <= '9') {
-            keypad[key - '0'] = true;
-        } else if (key >= 'A' && key <= 'F') {
-            keypad[10 + (key - 'A')] = true;
-        } else if (key >= 'a' && key <= 'f') {
-            keypad[10 + (key - 'a')] = true;
+void CHIP8::render_display() const {
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+    for (size_t y = 0; y < DISPLAY_HEIGHT; ++y) {
+        for (size_t x = 0; x < DISPLAY_WIDTH; ++x) {
+            if (display[y][x]) {
+                SDL_Rect rect = { static_cast<int>(x * WINDOW_SCALE), static_cast<int>(y * WINDOW_SCALE), WINDOW_SCALE, WINDOW_SCALE };
+                SDL_RenderFillRect(renderer, &rect);
+            }
+        }
+    }
+
+    SDL_RenderPresent(renderer);
+}
+
+void CHIP8::handle_input() {
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_QUIT) {
+            exit(0);
+        } else if (event.type == SDL_KEYDOWN || event.type == SDL_KEYUP) {
+            bool is_pressed = (event.type == SDL_KEYDOWN);
+            switch (event.key.keysym.sym) {
+                case SDLK_1: set_key(0x1, is_pressed); break;
+                case SDLK_2: set_key(0x2, is_pressed); break;
+                case SDLK_3: set_key(0x3, is_pressed); break;
+                case SDLK_4: set_key(0xC, is_pressed); break;
+                case SDLK_q: set_key(0x4, is_pressed); break;
+                case SDLK_w: set_key(0x5, is_pressed); break;
+                case SDLK_e: set_key(0x6, is_pressed); break;
+                case SDLK_r: set_key(0xD, is_pressed); break;
+                case SDLK_a: set_key(0x7, is_pressed); break;
+                case SDLK_s: set_key(0x8, is_pressed); break;
+                case SDLK_d: set_key(0x9, is_pressed); break;
+                case SDLK_f: set_key(0xE, is_pressed); break;
+                case SDLK_z: set_key(0xA, is_pressed); break;
+                case SDLK_x: set_key(0x0, is_pressed); break;
+                case SDLK_c: set_key(0xB, is_pressed); break;
+                case SDLK_v: set_key(0xF, is_pressed); break;
+            }
         }
     }
 }

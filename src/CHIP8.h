@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <random>
 #include <string>
+#include <SDL2/SDL.h>
 
 #define MEMORY_SIZE 4096
 #define REGISTER_COUNT 16
@@ -15,13 +16,14 @@
 #define FONT_ADDRESS 50
 #define FONT_SIZE 5
 #define FRAME_RATE 60
+#define WINDOW_SCALE 10
 
 class CHIP8 {
   public:
     void run();
     void load_ROM(const std::string& file_name);
     CHIP8(bool legacyShift = false);
-    ~CHIP8() = default;
+    ~CHIP8();
 
   private:
     bool useLegacyShift;
@@ -37,6 +39,9 @@ class CHIP8 {
     uint8_t delay_timer;
     uint8_t sound_timer;
 
+    SDL_Window* window;
+    SDL_Renderer* renderer;
+
     struct Instruction {
         uint16_t opcode;
         uint8_t type;
@@ -44,24 +49,16 @@ class CHIP8 {
         uint8_t Y;
         uint8_t N;
         uint8_t NN;
-        uint8_t NNN;
+        uint16_t NNN;
     };
 
     // private methods
 
-    /**
-     * @brief Fetch the current instruction.
-     *
-     * Read the two-bytes instruction that PC is currently pointing at from memory.
-     * And then immedietely increment the PC by 2 to get ready for the nect instruction.
-     * @return uint16_t The 16-bit opcode of the current instruction.
-     */
     uint16_t fetch_opcode();
     Instruction decode_opcode(uint16_t opcode);
     void execute_opcode(const Instruction& instruction);
     void logical_and_arithmetic(const Instruction& instruction);
     void clear_display();
-    void draw_sprite(uint8_t x, uint8_t y, uint8_t height);
     void update_timers();
 
     void initialize();
@@ -76,12 +73,13 @@ class CHIP8 {
     void stack_push(uint16_t address);
     uint16_t stack_pop();
 
+    void initialize_SDL();
+    void cleanup_SDL();
+
     std::random_device rd;
     std::mt19937 gen;
     std::uniform_int_distribution<> distrib;
-
 };
-
 
 #endif /* ifndef CHIP8_H */
 
