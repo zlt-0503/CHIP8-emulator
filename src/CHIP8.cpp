@@ -92,7 +92,7 @@ void CHIP8::logical_and_arithmetic(const CHIP8::Instruction& instruction) {
             break;
 
         default:
-            throw std::runtime_error("Unknown opcode: "
+            throw std::runtime_error("Unknown opcode: 0x8"
                 + std::to_string(instruction.opcode));
     }
 }
@@ -109,7 +109,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
             } else if (instruction.NN == 0xEE) { // 00EE: subroutines
                 PC = stack_pop();
             } else {
-                throw std::runtime_error("Unknown opcode: "
+                throw std::runtime_error("Unknown opcode: 0x0"
                     + std::to_string(instruction.opcode));
             }
             break;
@@ -220,7 +220,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     break;
 
                 default:
-                    throw std::runtime_error("Unknown opcode: "
+                    throw std::runtime_error("Unknown opcode: 0xE"
                         + std::to_string(instruction.opcode));
             }
             break;
@@ -292,7 +292,7 @@ void CHIP8::execute_opcode(const CHIP8::Instruction& instruction) {
                     break;
 
                 default:
-                    throw std::runtime_error("Unknown opcode: "
+                    throw std::runtime_error("Unknown opcode: 0xF"
                         + std::to_string(instruction.opcode));
             }
 

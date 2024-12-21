@@ -6,7 +6,7 @@ CXXFLAGS = -Wall -Wextra -std=c++17 -g
 
 TARGET = chip8_emulator
 
-SRCS = main.cpp CHIP8.cpp
+SRCS = src/main.cpp src/CHIP8.cpp
 OBJS = $(SRCS:.cpp=.o)
 
 all: $(TARGET)
