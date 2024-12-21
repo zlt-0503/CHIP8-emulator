@@ -33,12 +33,12 @@ uint16_t CHIP8::fetch_opcode() {
 CHIP8::Instruction CHIP8::decode_opcode(uint16_t opcode) {
     Instruction instruction;
     instruction.opcode = opcode;
-    instruction.type = (opcode | 0xF000) >> 12;
-    instruction.X = (opcode | 0x0F00) >> 8;
-    instruction.Y = (opcode | 0x00F0) >> 4;
-    instruction.N = opcode | 0x000F;
-    instruction.NN = opcode | 0x00FF;
-    instruction.NNN = opcode | 0x0FFF;
+    instruction.type = (opcode & 0xF000) >> 12;
+    instruction.X = (opcode & 0x0F00) >> 8;
+    instruction.Y = (opcode & 0x00F0) >> 4;
+    instruction.N = opcode & 0x000F;
+    instruction.NN = opcode & 0x00FF;
+    instruction.NNN = opcode & 0x0FFF;
 
     return instruction;
 }
@@ -347,7 +347,7 @@ void CHIP8::load_ROM(const std::string& file_name) {
 }
 
 void CHIP8::emulate_cycle() {
-    uint8_t opcode = fetch_opcode();
+    uint16_t opcode = fetch_opcode();
     Instruction instruction = decode_opcode(opcode);
     execute_opcode(instruction);
 }
