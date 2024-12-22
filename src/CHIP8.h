@@ -15,7 +15,7 @@
 #define KEYPAD_SIZE 16
 #define FONT_ADDRESS 50
 #define FONT_SIZE 5
-#define FRAME_RATE 60
+#define FRAME_RATE 600 // Set to 500 Hz for smoother gameplay
 #define WINDOW_SCALE 10
 
 class CHIP8 {
