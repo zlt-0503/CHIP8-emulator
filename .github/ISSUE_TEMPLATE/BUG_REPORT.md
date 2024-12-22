@@ -8,10 +8,13 @@ assignees: ''
 
 # Bug Report
 
-## Describe the bug**
-<!--- A clear and concise description of what the bug is.
+- OS: [e.g. Windows, macOS, Linux]
+- Version [e.g. 22]  
 
-**To Reproduce**
+## Describe the bug**
+<!--- A clear and concise description of what the bug is. --->
+
+## To Reproduce
 <!--- Steps to reproduce the behavior. --->
 
 ## Expected behavior**
@@ -19,12 +22,6 @@ assignees: ''
 
 ## Screenshots**
 <!--- If applicable, add screenshots to help explain your problem. --->
-
-## Desktop (please complete the following information):**
-<!--- 
- - OS: [e.g. Windows, macOS, Linux]
- - Version [e.g. 22]  
---->
 
 ## Additional context**
 <!--- Add any other context about the problem here. --->
