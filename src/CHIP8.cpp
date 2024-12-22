@@ -310,8 +310,15 @@ void CHIP8::clear_display() {
 }
 
 void CHIP8::update_timers() {
-    if (delay_timer > 0)--delay_timer;
-    if (sound_timer > 0) --sound_timer;
+    static auto last_time = std::chrono::high_resolution_clock::now();
+    auto curr_time = std::chrono::high_resolution_clock::now();
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(curr_time - last_time);
+
+    if (elapsed_time.count() >= 1000 / 60) { // Update timers at 60 Hz
+        if (delay_timer > 0) --delay_timer;
+        if (sound_timer > 0) --sound_timer;
+        last_time = curr_time;
+    }
 }
 
 bool CHIP8::is_sound_playing() const {
